@@ -126,12 +126,12 @@ function rewriteM3U8Content(content: string, baseUrl: string, req: Request, allo
 
     // 处理 EXT-X-MAP 标签中的 URI
     if (line.startsWith('#EXT-X-MAP:')) {
-      line = rewriteMapUri(line, baseUrl, proxyBase);
+      line = rewriteMapUri(line, baseUrl, proxyBase, allowCORS);
     }
 
     // 处理 EXT-X-KEY 标签中的 URI
     if (line.startsWith('#EXT-X-KEY:')) {
-      line = rewriteKeyUri(line, baseUrl, proxyBase);
+      line = rewriteKeyUri(line, baseUrl, proxyBase, allowCORS);
     }
 
     // 处理嵌套的 M3U8 文件 (EXT-X-STREAM-INF)
@@ -158,23 +158,23 @@ function rewriteM3U8Content(content: string, baseUrl: string, req: Request, allo
   return rewrittenLines.join('\n');
 }
 
-function rewriteMapUri(line: string, baseUrl: string, proxyBase: string) {
+function rewriteMapUri(line: string, baseUrl: string, proxyBase: string, allowCORS: boolean) {
   const uriMatch = line.match(/URI="([^"]+)"/);
   if (uriMatch) {
     const originalUri = uriMatch[1];
     const resolvedUrl = resolveUrl(baseUrl, originalUri);
-    const proxyUrl = `${proxyBase}/segment?url=${encodeURIComponent(resolvedUrl)}`;
+    const proxyUrl = allowCORS ? resolvedUrl : `${proxyBase}/segment?url=${encodeURIComponent(resolvedUrl)}`;
     return line.replace(uriMatch[0], `URI="${proxyUrl}"`);
   }
   return line;
 }
 
-function rewriteKeyUri(line: string, baseUrl: string, proxyBase: string) {
+function rewriteKeyUri(line: string, baseUrl: string, proxyBase: string, allowCORS: boolean) {
   const uriMatch = line.match(/URI="([^"]+)"/);
   if (uriMatch) {
     const originalUri = uriMatch[1];
     const resolvedUrl = resolveUrl(baseUrl, originalUri);
-    const proxyUrl = `${proxyBase}/key?url=${encodeURIComponent(resolvedUrl)}`;
+    const proxyUrl = allowCORS ? resolvedUrl : `${proxyBase}/key?url=${encodeURIComponent(resolvedUrl)}`;
     return line.replace(uriMatch[0], `URI="${proxyUrl}"`);
   }
   return line;

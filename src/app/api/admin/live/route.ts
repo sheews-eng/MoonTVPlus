@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { action, key, name, url, ua, epg } = body;
+    const { action, key, name, url, ua, epg, proxyMode } = body;
 
     if (!config) {
       return NextResponse.json({ error: '配置不存在' }, { status: 404 });
@@ -153,13 +153,16 @@ export async function POST(request: NextRequest) {
         config.LiveConfig = sortedLiveConfig;
         break;
 
-      case 'toggle_proxy_mode':
-        // 切换代理模式
-        const toggleSource = config.LiveConfig.find((l) => l.key === key);
-        if (!toggleSource) {
+      case 'set_proxy_mode':
+        // 设置代理模式
+        const setProxySource = config.LiveConfig.find((l) => l.key === key);
+        if (!setProxySource) {
           return NextResponse.json({ error: '直播源不存在' }, { status: 404 });
         }
-        toggleSource.proxyMode = !toggleSource.proxyMode;
+        if (!proxyMode || !['full', 'm3u8-only', 'direct'].includes(proxyMode)) {
+          return NextResponse.json({ error: '无效的代理模式' }, { status: 400 });
+        }
+        setProxySource.proxyMode = proxyMode as 'full' | 'm3u8-only' | 'direct';
         break;
 
       default:

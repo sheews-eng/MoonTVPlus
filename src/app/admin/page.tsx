@@ -380,7 +380,7 @@ interface LiveDataSource {
   channelNumber?: number;
   disabled?: boolean;
   from: 'config' | 'custom';
-  proxyMode?: boolean; // 代理模式开关
+  proxyMode?: 'full' | 'm3u8-only' | 'direct'; // 代理模式
 }
 
 // 自定义分类数据类型
@@ -10937,12 +10937,15 @@ const LiveSourceConfig = ({
     });
   };
 
-  const handleToggleProxyMode = (key: string) => {
-    withLoading(`toggleLiveProxyMode_${key}`, async () => {
+  const handleSetProxyMode = (key: string, mode: 'full' | 'm3u8-only' | 'direct') => {
+    withLoading(`setLiveProxyMode_${key}`, async () => {
+      // 保存旧值用于回滚
+      const oldMode = liveSources.find((s) => s.key === key)?.proxyMode;
+
       // 乐观更新本地状态
       setLiveSources((prev) =>
         prev.map((s) =>
-          s.key === key ? { ...s, proxyMode: !s.proxyMode } : s
+          s.key === key ? { ...s, proxyMode: mode } : s
         )
       );
 
@@ -10951,13 +10954,14 @@ const LiveSourceConfig = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'toggle_proxy_mode',
+            action: 'set_proxy_mode',
             key,
+            proxyMode: mode,
           }),
         });
 
         if (!response.ok) {
-          throw new Error('切换代理模式失败');
+          throw new Error('设置代理模式失败');
         }
 
         // 成功后刷新配置
@@ -10966,17 +10970,17 @@ const LiveSourceConfig = ({
         // 失败时回滚本地状态
         setLiveSources((prev) =>
           prev.map((s) =>
-            s.key === key ? { ...s, proxyMode: !s.proxyMode } : s
+            s.key === key ? { ...s, proxyMode: oldMode } : s
           )
         );
         showError(
-          error instanceof Error ? error.message : '切换代理模式失败',
+          error instanceof Error ? error.message : '设置代理模式失败',
           showAlert
         );
         throw error;
       }
     }).catch(() => {
-      console.error('操作失败', 'toggle_proxy_mode', key);
+      console.error('操作失败', 'set_proxy_mode', key);
     });
   };
 
@@ -11157,28 +11161,22 @@ const LiveSourceConfig = ({
           </span>
         </td>
         <td className='px-6 py-4 whitespace-nowrap'>
-          <button
-            onClick={() => {
-              handleToggleProxyMode(liveSource.key);
+          <select
+            value={liveSource.proxyMode || 'full'}
+            onChange={(e) => {
+              handleSetProxyMode(liveSource.key, e.target.value as 'full' | 'm3u8-only' | 'direct');
             }}
-            disabled={isLoading(`toggleLiveProxyMode_${liveSource.key}`)}
-            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${
-              liveSource.proxyMode
-                ? 'bg-blue-600 dark:bg-blue-500'
-                : 'bg-gray-200 dark:bg-gray-700'
-            } ${
-              isLoading(`toggleLiveProxyMode_${liveSource.key}`)
+            disabled={isLoading(`setLiveProxyMode_${liveSource.key}`)}
+            className={`px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 ${
+              isLoading(`setLiveProxyMode_${liveSource.key}`)
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer'
             }`}
-            title={liveSource.proxyMode ? '代理模式已启用' : '代理模式已禁用'}
           >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                liveSource.proxyMode ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
+            <option value='full'>全量代理</option>
+            <option value='m3u8-only'>仅代理m3u8</option>
+            <option value='direct'>直连</option>
+          </select>
         </td>
         <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
           <button
