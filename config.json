@@ -1,0 +1,21 @@
+{
+  "cache_time": 3600,
+  "api_site": {
+    "iyf": {
+      "api": "https://www.iyf.tv/api/vod",
+      "name": "爱壹帆"
+    },
+    "mudvod": {
+      "api": "https://www.mudvod.tv/api.php/provide/vod",
+      "name": "泥巴影院"
+    },
+    "duboku": {
+      "api": "https://www.duboku.tv/api.php/provide/vod",
+      "name": "独播库"
+    },
+    "olevod": {
+      "api": "https://www.olevod.com/api.php/provide/vod",
+      "name": "欧乐影院"
+    }
+  }
+}
